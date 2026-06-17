@@ -7,13 +7,13 @@ import {
   Where,
 } from '@loopback/repository';
 import {
-  post,
-  param,
+  del,
   get,
   getModelSchemaRef,
+  param,
   patch,
+  post,
   put,
-  del,
   requestBody,
   response,
 } from '@loopback/rest';
@@ -23,7 +23,7 @@ import {OrderRepository} from '../repositories';
 export class OrderController {
   constructor(
     @repository(OrderRepository)
-    public orderRepository : OrderRepository,
+    public orderRepository: OrderRepository,
   ) {}
 
   @post('/orders')
@@ -44,7 +44,19 @@ export class OrderController {
     })
     order: Omit<Order, 'id'>,
   ): Promise<Order> {
-    return this.orderRepository.create(order);
+    const createdOrder = await this.orderRepository.create(order);
+
+    try {
+      const {publishOrderCreated} = require('../index');
+      await publishOrderCreated(createdOrder);
+    } catch (error) {
+      console.error(
+        "[RabbitMQ] Échec du déclenchement de l'événement de création :",
+        error,
+      );
+    }
+
+    return createdOrder;
   }
 
   @get('/orders/count')
@@ -52,9 +64,7 @@ export class OrderController {
     description: 'Order model count',
     content: {'application/json': {schema: CountSchema}},
   })
-  async count(
-    @param.where(Order) where?: Where<Order>,
-  ): Promise<Count> {
+  async count(@param.where(Order) where?: Where<Order>): Promise<Count> {
     return this.orderRepository.count(where);
   }
 
@@ -70,9 +80,7 @@ export class OrderController {
       },
     },
   })
-  async find(
-    @param.filter(Order) filter?: Filter<Order>,
-  ): Promise<Order[]> {
+  async find(@param.filter(Order) filter?: Filter<Order>): Promise<Order[]> {
     return this.orderRepository.find(filter);
   }
 
@@ -106,7 +114,8 @@ export class OrderController {
   })
   async findById(
     @param.path.string('id') id: string,
-    @param.filter(Order, {exclude: 'where'}) filter?: FilterExcludingWhere<Order>
+    @param.filter(Order, {exclude: 'where'})
+    filter?: FilterExcludingWhere<Order>,
   ): Promise<Order> {
     return this.orderRepository.findById(id, filter);
   }

@@ -11,6 +11,15 @@ services:
     networks:
       - bookstore-network
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq-service
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - bookstore-network
+
   loopback-bookstore:
     build: ./loopback-bookstore
     container_name: loopback-bookstore
@@ -20,8 +29,10 @@ services:
       - DB_HOST=mongodb
       - DB_PORT=27017
       - DB_DATABASE=bookstore
+      - RABBITMQ_URL=amqp://rabbitmq:5672
     depends_on:
       - mongodb
+      - rabbitmq
     networks:
       - bookstore-network
 
@@ -34,8 +45,10 @@ services:
       - DB_HOST=mongodb
       - DB_PORT=27017
       - DB_DATABASE=bookstore
+      - RABBITMQ_URL=amqp://rabbitmq:5672
     depends_on:
       - mongodb
+      - rabbitmq
     networks:
       - bookstore-network
 
@@ -48,8 +61,10 @@ services:
       - DB_HOST=mongodb
       - DB_PORT=27017
       - DB_DATABASE=bookstore
+      - RABBITMQ_URL=amqp://rabbitmq:5672
     depends_on:
       - mongodb
+      - rabbitmq
     networks:
       - bookstore-network
 

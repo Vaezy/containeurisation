@@ -17,6 +17,7 @@ import {
   requestBody,
   response,
 } from '@loopback/rest';
+import amqp from 'amqplib';
 import {Book} from '../models';
 import {BookRepository} from '../repositories';
 
@@ -142,5 +143,28 @@ export class BookController {
   })
   async deleteById(@param.path.string('id') id: string): Promise<void> {
     await this.bookRepository.deleteById(id);
+
+    try {
+      const rabbitUrl = process.env.RABBITMQ_URL || 'amqp://localhost:5672';
+
+      const connection = await amqp.connect(rabbitUrl);
+      const channel = await connection.createChannel();
+
+      const queueName = 'book_deleted_queue';
+      await channel.assertQueue(queueName, {durable: true});
+
+      const cleanId = String(id);
+      const message = JSON.stringify({bookId: cleanId, event: 'BOOK_DELETED'});
+
+      channel.sendToQueue(queueName, Buffer.from(message), {
+        persistent: true,
+      });
+      console.log(`[RabbitMQ] Message envoyé : Livre ${cleanId} supprimé`);
+
+      await channel.close();
+      await connection.close();
+    } catch (error) {
+      console.error("[RabbitMQ] Erreur lors de l'envoi du message :", error);
+    }
   }
 }

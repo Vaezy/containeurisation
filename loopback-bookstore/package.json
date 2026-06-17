@@ -31,6 +31,7 @@
     "@loopback/rest": "^12.0.0",
     "@loopback/rest-explorer": "^5.0.0",
     "@loopback/service-proxy": "^5.0.0",
+    "amqplib": "^2.0.1",
     "loopback-connector-mongodb": "^6.2.0",
     "tslib": "^2.0.0"
   },
