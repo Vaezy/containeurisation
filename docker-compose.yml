@@ -1,0 +1,89 @@
+version: "3.8"
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: bookstore-db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - bookstore-network
+
+  loopback-bookstore:
+    build: ./loopback-bookstore
+    container_name: loopback-bookstore
+    ports:
+      - "3000:3000"
+    environment:
+      - DB_HOST=mongodb
+      - DB_PORT=27017
+      - DB_DATABASE=bookstore
+    depends_on:
+      - mongodb
+    networks:
+      - bookstore-network
+
+  order-service:
+    build: ./order-service
+    container_name: order-service
+    ports:
+      - "3001:3000"
+    environment:
+      - DB_HOST=mongodb
+      - DB_PORT=27017
+      - DB_DATABASE=bookstore
+    depends_on:
+      - mongodb
+    networks:
+      - bookstore-network
+
+  payment-service:
+    build: ./payment-service
+    container_name: payment-service
+    ports:
+      - "3002:3000"
+    environment:
+      - DB_HOST=mongodb
+      - DB_PORT=27017
+      - DB_DATABASE=bookstore
+    depends_on:
+      - mongodb
+    networks:
+      - bookstore-network
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "9001:9001"
+    environment:
+      - INVENTORY_SERVICE_URL=http://loopback-bookstore:3000
+      - ORDER_SERVICE_URL=http://order-service:3000
+      - PAYMENT_SERVICE_URL=http://payment-service:3000
+    depends_on:
+      - loopback-bookstore
+      - order-service
+      - payment-service
+    networks:
+      - bookstore-network
+
+  bookstore:
+    build: ./bookstore
+    container_name: bookstore-app
+    ports:
+      - "8082:4000"
+    environment:
+      - GATEWAY_URL=http://api-gateway:9001
+    depends_on:
+      - api-gateway
+    networks:
+      - bookstore-network
+
+volumes:
+  mongo-data:
+
+networks:
+  bookstore-network:
+    driver: bridge
